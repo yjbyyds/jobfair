@@ -46,7 +46,7 @@
     border: 1.5px solid #e3e7f2;
     border-radius: 12px;
     padding: 12px 14px;
-    font-size: 16px;   /* iOS 上小于16px会自动放大，所以用16px */
+    font-size: 16px;
     line-height: 1.65;
     font-family: inherit;
     outline: none;
@@ -109,6 +109,10 @@
     transition: .18s;
   }
   .preview-item:hover { border-color: #ccd3f7; background: #fff; }
+  .preview-item.is-dup {
+    border-color: #ffd8a8;
+    background: #fffaf2;
+  }
   .pi-time {
     font-weight: 700;
     color: #5b6bf0;
@@ -119,6 +123,10 @@
   .pi-info { flex: 1; min-width: 0; }
   .pi-name { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; word-break: break-all; }
   .pi-meta { font-size: 12px; color: #8b94ad; margin-top: 3px; word-break: break-all; }
+  .pi-dup-tag {
+    font-size: 11px; padding: 2px 8px; border-radius: 20px;
+    background: #fff2e0; color: #d9820a; font-weight: 600;
+  }
 
   .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .toolbar strong { font-size: 14px; color: #3a4256; }
@@ -409,19 +417,19 @@
     background: #fff;
     border-radius: 16px;
     padding: 22px 22px 16px;
-    max-width: 360px;
+    max-width: 380px;
     width: 100%;
     box-shadow: 0 20px 50px rgba(28, 34, 54, .25);
     animation: popIn .18s ease;
   }
   .modal-box .modal-icon { font-size: 30px; text-align: center; margin-bottom: 6px; }
   .modal-box .modal-msg {
-    font-size: 15px; color: #2b3345; line-height: 1.6;
-    text-align: center; margin-bottom: 20px; word-break: break-all;
+    font-size: 15px; color: #2b3345; line-height: 1.65;
+    text-align: center; margin-bottom: 20px; word-break: break-word;
   }
   .modal-box .modal-msg b { color: #5b6bf0; }
-  .modal-actions { display: flex; gap: 10px; justify-content: center; }
-  .modal-actions .btn { min-width: 90px; justify-content: center; }
+  .modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .modal-actions .btn { min-width: 84px; justify-content: center; }
 
   .toast {
     position: fixed; left: 50%; bottom: 40px;
@@ -454,7 +462,7 @@
 
   <header class="hero">
     <h1>📋 招聘会 · 宣讲会 记录本</h1>
-    <p>智能识别 · 按天查看 · 过期自动清理</p>
+    <p>智能识别 · 按天查看 · 重复检测 · 过期自动清理</p>
   </header>
 
   <section class="card">
@@ -584,27 +592,45 @@ function toast(msg) {
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
 }
 
-/* ============ 自定义确认弹窗 ============ */
-function showConfirm(message, onOk, okText) {
+/* ============ 通用弹窗 ============ */
+function showModal(opts) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
+  const btnHtml = opts.buttons.map((b, i) =>
+    `<button type="button" class="btn ${b.cls || ''}" data-i="${i}">${esc(b.text)}</button>`
+  ).join('');
   overlay.innerHTML = `
     <div class="modal-box" role="dialog" aria-modal="true">
-      <div class="modal-icon">⚠️</div>
-      <div class="modal-msg">${message}</div>
-      <div class="modal-actions">
-        <button type="button" class="btn" data-cancel>取消</button>
-        <button type="button" class="btn danger" data-ok>${esc(okText || '确定')}</button>
-      </div>
+      <div class="modal-icon">${opts.icon || '⚠️'}</div>
+      <div class="modal-msg">${opts.msg}</div>
+      <div class="modal-actions">${btnHtml}</div>
     </div>`;
   document.body.appendChild(overlay);
 
   const close = () => overlay.remove();
-  overlay.querySelector('[data-ok]').addEventListener('click', () => { close(); onOk(); });
-  overlay.querySelector('[data-cancel]').addEventListener('click', close);
+  overlay.querySelectorAll('[data-i]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = parseInt(btn.getAttribute('data-i'), 10);
+      close();
+      const b = opts.buttons[i];
+      if (b && typeof b.onClick === 'function') b.onClick();
+    });
+  });
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   document.addEventListener('keydown', function escKey(e) {
     if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escKey); }
+  });
+  return close;
+}
+
+function showConfirm(message, onOk, okText) {
+  showModal({
+    icon: '⚠️',
+    msg: message,
+    buttons: [
+      { text: '取消', cls: '', onClick: () => {} },
+      { text: okText || '确定', cls: 'danger', onClick: onOk }
+    ]
   });
 }
 
@@ -1040,6 +1066,27 @@ function save() {
   try { localStorage.setItem(STORAGE, JSON.stringify(records)); } catch (e) {}
 }
 
+/* ============ 重复检测 ============ */
+function normalizeCompany(s) {
+  return String(s || '').trim().toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[（）()【】\[\]]/g, '');
+}
+
+function dupKey(r) {
+  if (!r) return '';
+  const c = normalizeCompany(r.company);
+  const d = String(r.date || '').trim();
+  if (!c && !d) return '';
+  return d + '||' + c;
+}
+
+function findDuplicateRecord(data, excludeId) {
+  const key = dupKey(data);
+  if (!key) return null;
+  return records.find(r => r.id !== excludeId && dupKey(r) === key) || null;
+}
+
 /* ============ 记录卡片 ============ */
 function itemHTML(r, showDateBadge) {
   const d = r.date ? parseDateObj(r.date) : null;
@@ -1265,16 +1312,26 @@ function renderPreview() {
     return;
   }
 
+  // 计算重复
+  const seenKeys = new Set();
   box.innerHTML = previewRecords.map((r, i) => {
     const timeText = r.endTime ? `${r.startTime} – ${r.endTime}` : r.startTime;
     const tagClass = r.type === '宣讲会' ? 't-talk' : r.type === '招聘会' ? 't-fair' : 't-other';
+
+    const key = dupKey(r);
+    const inRecords = key && records.some(x => dupKey(x) === key);
+    const inPreview = key && seenKeys.has(key);
+    if (key) seenKeys.add(key);
+    const isDup = inRecords || inPreview;
+
     return `
-      <div class="preview-item">
+      <div class="preview-item ${isDup ? 'is-dup' : ''}">
         <div class="pi-time">${esc(timeText)}</div>
         <div class="pi-info">
           <div class="pi-name">
             ${esc(r.company)}
             <span class="tag ${tagClass}">${esc(r.type)}</span>
+            ${isDup ? '<span class="pi-dup-tag">⚠️ 已存在</span>' : ''}
           </div>
           ${r.location ? `<div class="pi-meta">📍 ${esc(r.location)}</div>` : ''}
         </div>
@@ -1415,23 +1472,46 @@ $('parseBtn').addEventListener('click', () => {
 
     const talkCount = multi.filter(x => x.type === '宣讲会').length;
     const fairCount = multi.filter(x => x.type === '招聘会').length;
-    setHint(`识别到 ${multi.length} 条（宣讲会 ${talkCount} · 招聘会 ${fairCount}）`);
+    const dupCount = multi.filter(r => findDuplicateRecord(r)).length;
+    let hintMsg = `识别到 ${multi.length} 条（宣讲会 ${talkCount} · 招聘会 ${fairCount}）`;
+    if (dupCount > 0) hintMsg += ` · ⚠️ ${dupCount} 条可能重复`;
+    setHint(hintMsg);
   } else {
     $('previewCard').classList.add('hidden');
     const data = parseText(raw);
+
+    const dup = findDuplicateRecord(data);
+    if (dup) {
+      const dupInfo = `${esc(dup.company || '未识别公司')} · ${esc(dup.date || '未指定日期')}${dup.startTime ? ' · ' + esc(dup.startTime) : ''}`;
+      showModal({
+        icon: '🔔',
+        msg: `检测到已有相似日程：<br><b>${dupInfo}</b><br><br>是否继续添加？`,
+        buttons: [
+          { text: '取消', cls: '', onClick: () => setHint('已取消添加') },
+          { text: '继续添加', cls: 'primary', onClick: () => {
+            openForm(data, null);
+            setHint('已确认继续添加（重复）');
+          }}
+        ]
+      });
+      setHint('⚠️ 检测到重复日程');
+      return;
+    }
+
     openForm(data, null);
     setHint(`单条识别：${data.company || '（未识别公司）'} · ${data.date || '（未识别日期）'} · ${data.startTime || '（未识别时间）'}`);
   }
 });
 
-$('addAllBtn').addEventListener('click', () => {
-  if (!previewRecords.length) return;
-  previewRecords.forEach(r => {
+/* 真正执行批量添加 */
+function doAddAll(list) {
+  if (!list.length) return;
+  list.forEach(r => {
     records.push({ id: uid(), ...r, createdAt: Date.now() });
   });
-  const n = previewRecords.length;
+  const n = list.length;
 
-  const firstWithDate = previewRecords.find(r => r.date);
+  const firstWithDate = list.find(r => r.date);
   if (firstWithDate) {
     selectedDate = firstWithDate.date;
     const dd = parseDateObj(firstWithDate.date);
@@ -1446,6 +1526,54 @@ $('addAllBtn').addEventListener('click', () => {
   $('raw').value = '';
   setHint(`已添加 ${n} 条记录 ✓`);
   toast(`已添加 ${n} 条记录`);
+}
+
+$('addAllBtn').addEventListener('click', () => {
+  if (!previewRecords.length) return;
+
+  // 分类：重复 / 非重复（含批内自身重复）
+  const dupList = [];
+  const nonDupList = [];
+  const seenKeys = new Set();
+
+  previewRecords.forEach(r => {
+    const key = dupKey(r);
+    const inRecords = key && records.some(x => dupKey(x) === key);
+    const inPreview = key && seenKeys.has(key);
+    if (inRecords || inPreview) {
+      dupList.push(r);
+    } else {
+      if (key) seenKeys.add(key);
+      nonDupList.push(r);
+    }
+  });
+
+  if (dupList.length === 0) {
+    doAddAll(previewRecords);
+    return;
+  }
+
+  const dupNames = dupList.slice(0, 3).map(r => esc(r.company || '未识别公司')).join('、');
+  const moreText = dupList.length > 3 ? ` 等 ${dupList.length} 条` : '';
+  const noDupText = nonDupList.length > 0
+    ? `<br><br>共 ${previewRecords.length} 条，其中 <b>${nonDupList.length}</b> 条为新增。`
+    : `<br><br>全部 ${previewRecords.length} 条均已存在。`;
+
+  showModal({
+    icon: '🔔',
+    msg: `检测到 <b>${dupList.length}</b> 条重复日程：<br><b>${dupNames}${moreText}</b>${noDupText}`,
+    buttons: [
+      { text: '取消', cls: '', onClick: () => setHint('已取消') },
+      { text: '跳过重复', cls: '', onClick: () => {
+        if (nonDupList.length === 0) {
+          toast('没有需要添加的新记录');
+          return;
+        }
+        doAddAll(nonDupList);
+      }},
+      { text: '全部添加', cls: 'primary', onClick: () => doAddAll(previewRecords) }
+    ]
+  });
 });
 
 $('cancelPreviewBtn').addEventListener('click', () => {
@@ -1475,6 +1603,26 @@ $('confirmBtn').addEventListener('click', () => {
     toast('请至少填写「公司名称」或「日期」');
     return;
   }
+
+  // 保存时也检测重复（编辑时排除自身）
+  const dup = findDuplicateRecord(data, editingId);
+  if (dup) {
+    const dupInfo = `${esc(dup.company || '未识别公司')} · ${esc(dup.date || '未指定日期')}${dup.startTime ? ' · ' + esc(dup.startTime) : ''}`;
+    showModal({
+      icon: '🔔',
+      msg: `已存在相似日程：<br><b>${dupInfo}</b><br><br>是否仍然保存？`,
+      buttons: [
+        { text: '取消', cls: '', onClick: () => {} },
+        { text: '仍然保存', cls: 'primary', onClick: () => reallySaveRecord(data) }
+      ]
+    });
+    return;
+  }
+
+  reallySaveRecord(data);
+});
+
+function reallySaveRecord(data) {
   if (editingId) {
     const r = records.find(x => x.id === editingId);
     if (r) Object.assign(r, data);
@@ -1495,7 +1643,7 @@ $('confirmBtn').addEventListener('click', () => {
   $('raw').value = '';
   setHint('已保存 ✓');
   toast('已保存');
-});
+}
 
 $('cancelBtn').addEventListener('click', () => { closeForm(); setHint(''); });
 
@@ -1564,11 +1712,10 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) cleanupExpired(false);
 });
 
-/* ============ Service Worker 注册 ============ */
+/* ============ Service Worker 注册（自动检测更新） ============ */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then(reg => {
-      // 检测到新版本时自动刷新
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
         if (!newWorker) return;
@@ -1581,7 +1728,6 @@ if ('serviceWorker' in navigator) {
       });
     }).catch(() => {});
 
-    // 每次打开都检查一次更新
     navigator.serviceWorker.ready.then(reg => reg.update());
   });
 }

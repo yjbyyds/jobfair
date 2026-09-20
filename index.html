@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>招聘会 / 宣讲会 记录本</title>
+
+<!-- PWA 配置 -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#5b6bf0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="招聘记录">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link rel="apple-touch-icon" href="./icon.svg">
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(160deg, #eef1fb 0%, #f7f8fc 40%, #eef4f8 100%);
+    color: #1f2430;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app { max-width: 860px; margin: 0 auto; }
+  .hero { text-align: center; margin-bottom: 22px; }
+  .hero h1 { font-size: 26px; margin: 0 0 8px; letter-spacing: .5px; }
+  .hero p { margin: 0; color: #7a839a; font-size: 14px; }
+
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 6px 24px rgba(63, 74, 120, .07);
+    border: 1px solid rgba(255,255,255,.9);
+  }
+  textarea {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    border: 1.5px solid #e3e7f2;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 16px;   /* iOS 上小于16px会自动放大，所以用16px */
+    line-height: 1.65;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    background: #fbfcff;
+    color: #1f2430;
+  }
+  textarea:focus { border-color: #5b6bf0; box-shadow: 0 0 0 3px rgba(91,107,240,.12); }
+  textarea::placeholder { color: #b3bacb; }
+
+  .row { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .btn {
+    border: 1.5px solid #e3e7f2;
+    background: #fff;
+    color: #45506b;
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: .18s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:hover { border-color: #c3caf0; background: #f7f8ff; }
+  .btn.primary {
+    background: linear-gradient(135deg, #6675f5, #5b6bf0);
+    color: #fff; border-color: transparent;
+    box-shadow: 0 4px 12px rgba(91,107,240,.3);
+    font-weight: 600;
+  }
+  .btn.primary:hover { filter: brightness(1.07); }
+  .btn.danger { color: #d9534f; border-color: #f3d6d5; }
+  .btn.danger:hover { background: #fdf3f3; }
+  .btn.small { padding: 6px 11px; font-size: 13px; border-radius: 8px; }
+  .hint { font-size: 13px; color: #7a839a; }
+
+  h2 { font-size: 16px; margin: 0 0 14px; color: #3a4256; }
+
+  .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .form-grid label {
+    display: flex; flex-direction: column; gap: 6px;
+    font-size: 13px; color: #6b7488; font-weight: 500;
+  }
+  .form-grid label.full { grid-column: 1 / -1; }
+  .form-grid input, .form-grid select {
+    border: 1.5px solid #e3e7f2; border-radius: 9px;
+    padding: 9px 11px; font-size: 16px; font-family: inherit;
+    outline: none; background: #fbfcff; color: #1f2430; width: 100%;
+  }
+  .form-grid input:focus, .form-grid select:focus { border-color: #5b6bf0; background: #fff; }
+
+  #previewList { max-height: 440px; overflow-y: auto; padding-right: 4px; }
+  .preview-item {
+    display: flex; gap: 12px; align-items: center;
+    padding: 11px 13px;
+    border: 1.5px solid #eef0f7;
+    border-radius: 11px;
+    margin-bottom: 8px;
+    background: #fbfcff;
+    transition: .18s;
+  }
+  .preview-item:hover { border-color: #ccd3f7; background: #fff; }
+  .pi-time {
+    font-weight: 700;
+    color: #5b6bf0;
+    font-size: 13.5px;
+    min-width: 82px;
+    flex-shrink: 0;
+  }
+  .pi-info { flex: 1; min-width: 0; }
+  .pi-name { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; word-break: break-all; }
+  .pi-meta { font-size: 12px; color: #8b94ad; margin-top: 3px; word-break: break-all; }
+
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .toolbar strong { font-size: 14px; color: #3a4256; }
+  .spacer { flex: 1; }
+  .toolbar select {
+    border: 1.5px solid #e3e7f2; border-radius: 9px; padding: 7px 10px;
+    font-size: 13px; font-family: inherit; background: #fff; color: #45506b;
+    outline: none; cursor: pointer;
+  }
+  .toolbar select:focus { border-color: #5b6bf0; }
+
+  .date-picker-wrap { position: relative; }
+
+  .date-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border: 1.5px solid #e3e7f2;
+    border-radius: 9px;
+    padding: 7px 11px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: #45506b;
+    cursor: pointer;
+    transition: .18s;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  .date-btn:hover { border-color: #c3caf0; background: #f7f8ff; }
+  .date-btn.open {
+    border-color: #5b6bf0;
+    box-shadow: 0 0 0 3px rgba(91,107,240,.13);
+    background: #fff;
+  }
+  .date-btn .caret {
+    font-size: 10px;
+    color: #8b94ad;
+    transition: transform .18s;
+    line-height: 1;
+  }
+  .date-btn.open .caret { transform: rotate(180deg); }
+  .date-btn .cal-icon { font-size: 14px; }
+
+  .cal-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 268px;
+    max-width: calc(100vw - 34px);
+    background: #fff;
+    border-radius: 14px;
+    border: 1.5px solid #eef0f7;
+    box-shadow: 0 14px 36px rgba(45, 55, 100, .16);
+    padding: 12px;
+    z-index: 200;
+    animation: popIn .14s ease;
+  }
+  @keyframes popIn { from { transform: translateY(-6px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .cal-pop-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .cal-pop-title {
+    flex: 1;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #3a4256;
+    letter-spacing: .3px;
+  }
+  .cal-nav {
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    border: 1.5px solid #e3e7f2;
+    background: #fff;
+    color: #45506b;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+    transition: .15s;
+    line-height: 1;
+    padding: 0 0 2px;
+    flex-shrink: 0;
+  }
+  .cal-nav:hover { border-color: #c3caf0; background: #f7f8ff; color: #5b6bf0; }
+  .cal-nav:active { transform: scale(.93); }
+
+  .cal-pop-week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+  .cal-pop-week span {
+    text-align: center;
+    font-size: 11px;
+    color: #8b94ad;
+    padding: 2px 0;
+    font-weight: 500;
+  }
+  .cal-pop-week span.wkend { color: #b9a0a0; }
+
+  .cal-pop-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+
+  .cal-cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    min-height: 30px;
+    border-radius: 8px;
+    border: 1.5px solid transparent;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: #3a4256;
+    transition: .13s;
+    user-select: none;
+  }
+  .cal-cell:hover { border-color: #ccd3f7; background: #f0f3ff; }
+  .cal-cell.other { color: #c8cddb; background: #fafbfe; }
+  .cal-cell.other:hover { background: #f2f4fc; }
+
+  .cal-cell.today {
+    border-color: #ffcf94;
+    background: #fffaf2;
+    color: #d9820a;
+    font-weight: 800;
+  }
+  .cal-cell.has {
+    background: linear-gradient(135deg, #eef1ff, #e0e6ff);
+    color: #4a5ce0;
+    font-weight: 700;
+  }
+  .cal-cell.has.today {
+    background: linear-gradient(135deg, #fff0d6, #ffdfb0);
+    color: #b76e00;
+  }
+  .cal-cell.selected {
+    border-color: #5b6bf0;
+    box-shadow: 0 0 0 2px rgba(91,107,240,.18);
+    background: linear-gradient(135deg, #dfe4ff, #ccd4ff);
+    color: #3a4ad0;
+    font-weight: 800;
+  }
+  .cal-cell.selected.today {
+    border-color: #d9820a;
+    box-shadow: 0 0 0 2px rgba(217,130,10,.2);
+    background: linear-gradient(135deg, #ffe8c6, #ffd79c);
+    color: #a56200;
+  }
+
+  .cal-badge {
+    position: absolute;
+    top: 1px; right: 1px;
+    min-width: 13px; height: 13px;
+    border-radius: 6.5px;
+    background: #5b6bf0;
+    color: #fff;
+    font-size: 8.5px;
+    font-weight: 700;
+    font-style: normal;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 3px;
+    line-height: 1;
+  }
+  .cal-cell.today .cal-badge { background: #d9820a; }
+  .cal-cell.selected .cal-badge { background: #3a4ad0; }
+
+  .cal-pop-foot {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1.5px dashed #eef1f8;
+  }
+  .cal-foot-btn {
+    flex: 1;
+    border: 1.5px solid #e3e7f2;
+    background: #fff;
+    color: #45506b;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: .15s;
+    white-space: nowrap;
+  }
+  .cal-foot-btn:hover { border-color: #c3caf0; background: #f7f8ff; color: #5b6bf0; }
+
+  .clean-tip {
+    font-size: 12.5px;
+    color: #8b94ad;
+    background: #f7f8ff;
+    border: 1px dashed #dfe3f5;
+    border-radius: 9px;
+    padding: 7px 12px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .clean-tip b { color: #5b6bf0; font-weight: 600; }
+
+  .item {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 14px; border: 1.5px solid #eef0f7;
+    border-radius: 13px; margin-bottom: 10px;
+    transition: .2s; background: #fff;
+  }
+  .item:hover { border-color: #ccd3f7; box-shadow: 0 6px 18px rgba(91,107,240,.09); transform: translateY(-1px); }
+  .item.past { opacity: .62; }
+
+  .date-badge {
+    flex-shrink: 0; width: 64px; text-align: center;
+    background: linear-gradient(135deg, #eef1ff, #e2e7ff);
+    border-radius: 10px; padding: 8px 2px;
+  }
+  .date-badge .d { font-size: 16px; font-weight: 700; color: #5b6bf0; line-height: 1.3; }
+  .date-badge .w { font-size: 11px; color: #8b94ad; margin-top: 2px; }
+
+  .info { flex: 1; min-width: 0; }
+  .company { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; word-break: break-all; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+  .t-talk { background: #eaf0ff; color: #4a5ce0; }
+  .t-fair { background: #e8f8f0; color: #1f9d63; }
+  .t-other { background: #f0f1f5; color: #6b7488; }
+  .t-past { background: #f5f5f7; color: #9aa1b3; }
+  .t-expire { background: #fff2e0; color: #d9820a; }
+  .meta { margin-top: 6px; font-size: 13px; color: #6b7488; display: flex; gap: 14px; flex-wrap: wrap; }
+  .note { margin-top: 6px; font-size: 13px; color: #8b94ad; }
+  .actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  .day-result-head {
+    display: flex; align-items: center; gap: 9px;
+    padding: 4px 2px 10px;
+    border-bottom: 1.5px solid #f0f2f8;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .dr-date { font-size: 15.5px; font-weight: 700; color: #3a4256; }
+  .dr-week { font-size: 12px; color: #8b94ad; }
+  .dr-count { margin-left: auto; font-size: 12px; color: #8b94ad; }
+  .day-today-badge {
+    font-size: 11px; font-weight: 600;
+    background: linear-gradient(135deg, #ffe6c4, #ffd6a0);
+    color: #b76e00;
+    padding: 2px 9px; border-radius: 20px;
+  }
+  .day-empty {
+    padding: 34px 16px;
+    border-radius: 11px;
+    border: 1.5px dashed #e3e7f2;
+    background: #fbfcff;
+    color: #a8afc2;
+    font-size: 13.5px;
+    text-align: center;
+    letter-spacing: .5px;
+  }
+  .day-empty::before { content: '☕ '; font-size: 15px; }
+
+  .empty { text-align: center; color: #9aa1b3; padding: 44px 0; font-size: 14px; }
+  .hidden { display: none !important; }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(28, 34, 54, .45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    animation: fadeIn .15s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 22px 22px 16px;
+    max-width: 360px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(28, 34, 54, .25);
+    animation: popIn .18s ease;
+  }
+  .modal-box .modal-icon { font-size: 30px; text-align: center; margin-bottom: 6px; }
+  .modal-box .modal-msg {
+    font-size: 15px; color: #2b3345; line-height: 1.6;
+    text-align: center; margin-bottom: 20px; word-break: break-all;
+  }
+  .modal-box .modal-msg b { color: #5b6bf0; }
+  .modal-actions { display: flex; gap: 10px; justify-content: center; }
+  .modal-actions .btn { min-width: 90px; justify-content: center; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 40px;
+    transform: translateX(-50%) translateY(10px);
+    background: rgba(35, 42, 62, .93);
+    color: #fff; font-size: 13.5px;
+    padding: 10px 20px; border-radius: 24px;
+    z-index: 10000; opacity: 0;
+    transition: opacity .25s, transform .25s;
+    pointer-events: none;
+    max-width: 80vw;
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 620px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .item { flex-wrap: wrap; }
+    .actions { width: 100%; justify-content: flex-end; }
+    .hero h1 { font-size: 21px; }
+    .pi-time { min-width: 64px; font-size: 12.5px; }
+    .toolbar select { padding: 6px 8px; font-size: 12.5px; }
+    .date-btn { font-size: 12.5px; padding: 6px 9px; }
+    .cal-pop { right: auto; left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="hero">
+    <h1>📋 招聘会 · 宣讲会 记录本</h1>
+    <p>智能识别 · 按天查看 · 过期自动清理</p>
+  </header>
+
+  <section class="card">
+    <textarea id="raw" placeholder="在此粘贴招聘信息，支持多条连续文本自动拆分…"></textarea>
+    <div class="row">
+      <button type="button" id="parseBtn" class="btn primary">✨ 智能识别并添加</button>
+      <button type="button" id="manualBtn" class="btn">＋ 手动添加</button>
+      <span id="hint" class="hint"></span>
+    </div>
+  </section>
+
+  <section class="card hidden" id="previewCard">
+    <h2>📋 识别到 <span id="previewCount">0</span> 条记录 <span id="previewDate" class="hint"></span></h2>
+    <div id="previewList"></div>
+    <div class="row">
+      <button type="button" id="addAllBtn" class="btn primary">✓ 全部添加到列表</button>
+      <button type="button" id="cancelPreviewBtn" class="btn">取消</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="editCard">
+    <h2 id="editTitle">确认识别结果</h2>
+    <div class="form-grid">
+      <label>公司名称
+        <input id="fCompany" placeholder="公司名称">
+      </label>
+      <label>类型
+        <select id="fType">
+          <option value="宣讲会">宣讲会</option>
+          <option value="招聘会">招聘会</option>
+          <option value="其他">其他</option>
+        </select>
+      </label>
+      <label>日期
+        <input type="date" id="fDate">
+      </label>
+      <label>开始时间
+        <input type="time" id="fStart">
+      </label>
+      <label>结束时间
+        <input type="time" id="fEnd">
+      </label>
+      <label>地点
+        <input id="fLocation" placeholder="选填">
+      </label>
+      <label class="full">备注
+        <input id="fNote" placeholder="选填，例如：带简历 / 现场笔试">
+      </label>
+    </div>
+    <div class="row">
+      <button type="button" id="confirmBtn" class="btn primary">保存</button>
+      <button type="button" id="cancelBtn" class="btn">取消</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="toolbar">
+      <strong id="count">共 0 条</strong>
+      <div class="spacer"></div>
+
+      <div class="date-picker-wrap" id="datePickerWrap">
+        <button type="button" class="date-btn" id="dateBtn">
+          <span class="cal-icon">📅</span>
+          <span id="dateBtnText">—</span>
+          <span class="caret">▾</span>
+        </button>
+        <div class="cal-pop hidden" id="calPop"></div>
+      </div>
+
+      <select id="filterSel">
+        <option value="all">全部类型</option>
+        <option value="宣讲会">宣讲会</option>
+        <option value="招聘会">招聘会</option>
+        <option value="其他">其他</option>
+      </select>
+      <select id="sortSel">
+        <option value="asc">时间正序</option>
+        <option value="desc">时间倒序</option>
+      </select>
+      <button type="button" id="cleanExpiredBtn" class="btn small">🧹 清理过期</button>
+      <button type="button" id="clearAll" class="btn danger small">清空全部</button>
+    </div>
+    <div class="clean-tip">
+      <span>💡</span>
+      <span>点击日期按钮选择日期，查看当天安排；活动结束后保留 <b>1 天</b>，之后自动清理</span>
+    </div>
+    <div id="list"></div>
+  </section>
+
+</div>
+
+<script>
+/* ============ 基础工具 ============ */
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const WEEK_CN = ['日', '一', '二', '三', '四', '五', '六'];
+const NONE_DATE = '__none__';
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+function fmtDateObj(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function parseDateObj(s) {
+  const p = String(s).split('-').map(Number);
+  return new Date(p[0], (p[1] || 1) - 1, p[2] || 1);
+}
+function todayStart() {
+  const d = new Date(); d.setHours(0, 0, 0, 0); return d;
+}
+
+/* ============ 轻提示 Toast ============ */
+let toastEl = null, toastTimer = null;
+function toast(msg) {
+  if (!toastEl) {
+    toastEl = document.createElement('div');
+    toastEl.className = 'toast';
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+/* ============ 自定义确认弹窗 ============ */
+function showConfirm(message, onOk, okText) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <div class="modal-icon">⚠️</div>
+      <div class="modal-msg">${message}</div>
+      <div class="modal-actions">
+        <button type="button" class="btn" data-cancel>取消</button>
+        <button type="button" class="btn danger" data-ok>${esc(okText || '确定')}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.querySelector('[data-ok]').addEventListener('click', () => { close(); onOk(); });
+  overlay.querySelector('[data-cancel]').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', function escKey(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escKey); }
+  });
+}
+
+/* ============ 过期自动清理 ============ */
+const EXPIRE_KEEP_MS = 24 * 60 * 60 * 1000;
+
+function expireAt(r) {
+  if (!r || !r.date) return null;
+  const d = parseDateObj(r.date);
+  const t = r.endTime || r.startTime || '23:59';
+  const parts = String(t).split(':');
+  let h = parseInt(parts[0], 10);
+  let mi = parseInt(parts[1], 10);
+  if (isNaN(h)) h = 23;
+  if (isNaN(mi)) mi = 59;
+  d.setHours(h, mi, 0, 0);
+  return d.getTime();
+}
+function expireDeadline(r) {
+  const et = expireAt(r);
+  return et === null ? null : et + EXPIRE_KEEP_MS;
+}
+function isPastDeadline(r) {
+  const dl = expireDeadline(r);
+  return dl !== null && Date.now() > dl;
+}
+function isEnded(r) {
+  const et = expireAt(r);
+  return et !== null && Date.now() > et;
+}
+
+function cleanupExpired(silent) {
+  if (!records.length) return 0;
+  const kept = [];
+  let removed = 0;
+  for (const r of records) {
+    if (isPastDeadline(r)) removed++;
+    else kept.push(r);
+  }
+  if (removed > 0) {
+    records = kept;
+    save();
+    render();
+    if (!silent) toast(`🧹 已自动清理 ${removed} 条过期记录`);
+  }
+  return removed;
+}
+
+/* ============ 日期识别 ============ */
+function extractDateInfo(text) {
+  let m;
+
+  m = text.match(/(\d{4})\s*[年\-\/.]\s*(\d{1,2})\s*[月\-\/.]\s*(\d{1,2})\s*[日号]?/);
+  if (m) {
+    const y = +m[1], mo = +m[2], d = +m[3];
+    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+      return { date: `${y}-${pad(mo)}-${pad(d)}`, matched: m[0] };
+    }
+  }
+
+  const relMap = { '今天': 0, '今日': 0, '明天': 1, '明日': 1, '后天': 2, '后日': 2 };
+  for (const k in relMap) {
+    if (text.includes(k)) {
+      const d = new Date();
+      d.setDate(d.getDate() + relMap[k]);
+      return { date: fmtDateObj(d), matched: k };
+    }
+  }
+
+  m = text.match(/(下{1,2}|本|这)?\s*(?:周|星期|礼拜)\s*([一二三四五六日天])/);
+  if (m) {
+    const map = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '日': 7, '天': 7 };
+    const target = map[m[2]];
+    const base = new Date(); base.setHours(0, 0, 0, 0);
+    const cur = base.getDay() === 0 ? 7 : base.getDay();
+    let diff = target - cur;
+    let crossed = false;
+    if (diff <= 0) { diff += 7; crossed = true; }
+    if (m[1] && m[1].startsWith('下') && !crossed) diff += 7;
+    base.setDate(base.getDate() + diff);
+    return { date: fmtDateObj(base), matched: m[0] };
+  }
+
+  m = text.match(/(\d{4})\s*年\s*(\d{1,2})\s*月/);
+  if (m) return { date: `${m[1]}-${pad(+m[2])}-01`, matched: m[0] };
+
+  m = text.match(/(\d{1,2})\s*[月\/.]\s*(\d{1,2})\s*[日号]?/);
+  if (m) {
+    const mo = +m[1], d = +m[2];
+    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+      const now = new Date();
+      let y = now.getFullYear();
+      const cand = new Date(y, mo - 1, d);
+      if (cand < todayStart()) y++;
+      return { date: `${y}-${pad(mo)}-${pad(d)}`, matched: m[0] };
+    }
+  }
+
+  return null;
+}
+
+/* ============ 时间识别 ============ */
+function extractTimeInfo(text) {
+  const points = [];
+  const re = /(上午|下午|晚上|中午|早上|凌晨)?\s*(\d{1,2})\s*[点时:：]\s*(\d{1,2})?\s*分?/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    let h = parseInt(m[2], 10);
+    const mi = m[3] ? parseInt(m[3], 10) : 0;
+    const p = m[1] || '';
+    if (h > 24 || mi > 59) continue;
+    if ((p === '下午' || p === '晚上') && h < 12) h += 12;
+    if (p === '中午' && h < 12) h += 12;
+    if ((p === '上午' || p === '早上' || p === '凌晨') && h === 12) h = 0;
+    points.push({ h, mi });
+    if (points.length >= 4) break;
+  }
+  if (!points.length) return null;
+  const a = points[0], b = points[1];
+  return {
+    start: `${pad(a.h)}:${pad(a.mi)}`,
+    end: b ? `${pad(b.h)}:${pad(b.mi)}` : ''
+  };
+}
+
+/* ============ 公司名工具 ============ */
+const COMPANY_RE = /([\u4e00-\u9fa5A-Za-z0-9()（）·&'"\-]{2,25}?)(股份有限公司|有限责任公司|集团有限公司|有限公司|集团|公司|银行|研究院|研究所|设计院|学院|大学|医院|事务所|工作室)/;
+
+function cleanCompany(name) {
+  if (!name) return '';
+  const marks = ['招聘会', '宣讲会', '双选会', '洽谈会', '专场', '校园招聘',
+                 '招聘', '宣讲', '举办', '将于', '定于', '拟定'];
+  let idx = 0;
+  for (const mk of marks) {
+    const i = name.lastIndexOf(mk);
+    if (i >= 0 && i + mk.length > idx) idx = i + mk.length;
+  }
+  if (idx > 0 && idx < name.length - 1) name = name.slice(idx);
+  name = name.replace(/^[在由于将和与及为是\s]+/, '');
+  name = name.replace(/^[\s\d\-—·、,，。.【】()（）]+/, '');
+  return name.trim();
+}
+
+function extractCompany(text) {
+  const b = text.match(/【([^】]{2,50})】/);
+  if (b) {
+    let inner = b[1].trim();
+    const isTitle = /(?:宣讲会|招聘会|双选会|洽谈会|说明会|分享会|宣讲|招聘|校招|专场|双选)/.test(inner);
+    if (isTitle) {
+      inner = inner.split(/[｜|]/)[0].trim();
+      inner = inner.replace(/[-—–].*$/, '').trim();
+      inner = inner.replace(/20\d{2}.*$/, '').trim();
+      inner = inner.replace(/(?:校园)?(?:宣讲会|招聘会|双选会|洽谈会|说明会|分享会|宣讲|招聘|校招|专场|双选).*$/, '').trim();
+      inner = inner.replace(/[\s\-—·、,，。.]+$/, '').trim();
+
+      if (inner && inner.length >= 2 && inner.length <= 25) {
+        const mm = inner.match(COMPANY_RE);
+        if (mm) return cleanCompany(mm[0]);
+        return inner;
+      }
+    }
+  }
+
+  const head = text.slice(0, 100);
+  let m = head.match(COMPANY_RE);
+  if (m) {
+    const bad = ['行业与公司', '本公司', '贵公司', '该公司',
+                 '公司概况', '公司简介', '公司名称', '公司地址', '公司官网',
+                 '公司介绍', '公司文化', '公司福利', '公司规模'];
+    if (!bad.some(x => m[0] === x || m[0].includes(x))) {
+      return cleanCompany(m[0]);
+    }
+  }
+
+  let fallback = text.replace(/【[^】]*】/g, '').trim();
+  const first = fallback.split(/[\n。；;！!？?，,]/)[0].trim();
+  if (first && first.length >= 2 && first.length <= 20) {
+    return cleanCompany(first);
+  }
+
+  return '';
+}
+
+/* ============ 类型 ============ */
+function judgeType(name) {
+  if (/招聘会|双选会|洽谈会|供需见面会|大型招聘|专场双选|推介会|选调|招录/.test(name)) return '招聘会';
+  if (/宣讲会|宣讲|说明会|分享会/.test(name)) return '宣讲会';
+  return '宣讲会';
+}
+
+function extractLocation(text) {
+  const t = text.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ');
+  const stopWords = /(?:投递|链接|报名|宣讲时间|宣讲地点|举办时间|活动时间|面试时间|联系人|联系方式|网址|http|网申|简历投递|扫码|加入)/;
+
+  let m = t.match(/(?:宣讲地点|举办地点|活动地点|会议地点|面试地点|招聘地点|活动地址|宣讲地址)\s*[:：]\s*([^，,。;；！!]{2,60})/);
+  if (m) {
+    let loc = m[1].trim().split(stopWords)[0].trim().replace(/\s+$/, '');
+    if (loc) return loc;
+  }
+
+  const reLoc = /地点\s*[:：]\s*([^，,。;；！!]{2,60})/g;
+  let lm;
+  while ((lm = reLoc.exec(t)) !== null) {
+    const idx = lm.index;
+    const prefix = t.slice(Math.max(0, idx - 2), idx);
+    if (prefix === '工作') continue;
+    let loc = lm[1].trim().split(stopWords)[0].trim().replace(/\s+$/, '');
+    if (loc) return loc;
+  }
+
+  m = t.match(/地址\s*[:：]\s*([^，,。;；！!]{2,60})/);
+  if (m) {
+    let loc = m[1].trim().split(stopWords)[0].trim().replace(/\s+$/, '');
+    if (loc) return loc;
+  }
+
+  m = t.match(/在\s*([^，,。;；！!]{2,30}?)\s*(?:举办|举行|开展|进行)/);
+  if (m) return m[1].trim();
+
+  return '';
+}
+
+/* ============ 单条解析 ============ */
+function parseText(raw) {
+  const text = raw.replace(/\r/g, ' ').replace(/\s+/g, ' ').trim();
+  const dateInfo = extractDateInfo(text);
+  let work = text;
+  if (dateInfo) work = work.replace(dateInfo.matched, ' ');
+  const timeInfo = extractTimeInfo(work);
+  work = work.replace(/(\d{1,2})\s*[:：点时]\s*\d{0,2}\s*分?/g, ' ');
+  const company = extractCompany(work);
+  const location = extractLocation(text);
+
+  return {
+    company,
+    type: judgeType(text),
+    date: dateInfo ? dateInfo.date : '',
+    startTime: timeInfo ? timeInfo.start : '',
+    endTime: timeInfo ? timeInfo.end : '',
+    location,
+    note: ''
+  };
+}
+
+/* ============ 多行（带 Tab / 换行）解析 ============ */
+function parseMultiEntries(raw) {
+  const text = raw.replace(/\r/g, '\n');
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  if (lines.length < 2) return null;
+
+  const globalDate = extractDateInfo(text);
+  const baseDate = globalDate ? globalDate.date : '';
+  const results = [];
+
+  for (const line of lines) {
+    const timeMatch = line.match(/^(\d{1,2})\s*[:：]\s*(\d{1,2})\s*(?:[-–~至—]\s*(\d{1,2})\s*[:：]\s*(\d{1,2}))?/);
+    if (!timeMatch) continue;
+
+    const startH = +timeMatch[1], startM = +timeMatch[2];
+    if (startH > 23 || startM > 59) continue;
+
+    let endH = null, endM = null;
+    if (timeMatch[3] !== undefined) {
+      endH = +timeMatch[3];
+      endM = +timeMatch[4];
+      if (endH > 23 || endM > 59) { endH = null; endM = null; }
+    }
+
+    let rest = line.slice(timeMatch[0].length).trim().replace(/^[\s\-—–:：\t]+/, '').trim();
+    if (!rest) continue;
+
+    let parts = rest.split(/\t+|\s{3,}/).map(s => s.trim()).filter(Boolean);
+    if (parts.length === 1) {
+      const segs = rest.split(/\t/).map(s => s.trim()).filter(Boolean);
+      if (segs.length >= 2) parts = segs;
+      else {
+        const m = rest.match(/^(.+?(?:公司|集团|银行|研究院|研究所|学院|大学|事务所|工作室|中心|部|厂|店))[\s\t]+(.+)$/);
+        if (m) parts = [m[1].trim(), m[2].trim()];
+      }
+    }
+
+    let name = parts[0] || '';
+    let location = parts.slice(1).join(' ').trim();
+
+    if (!location && name.includes(' ')) {
+      const sp = name.split(/\s+/);
+      if (sp.length >= 2) { location = sp.pop(); name = sp.join(' '); }
+    }
+
+    name = name.replace(/^[【\[\(（]+|[】\]\)）]+$/g, '').trim();
+    if (!name) continue;
+
+    const lineDateInfo = extractDateInfo(line);
+    const dateVal = lineDateInfo ? lineDateInfo.date : baseDate;
+
+    results.push({
+      company: name,
+      type: judgeType(name),
+      date: dateVal,
+      startTime: `${pad(startH)}:${pad(startM)}`,
+      endTime: endH != null ? `${pad(endH)}:${pad(endM)}` : '',
+      location: location,
+      note: ''
+    });
+  }
+
+  return results.length >= 2 ? results : null;
+}
+
+/* ============ 连续无换行智能解析 ============ */
+const QUANT_CHARS = '号楼层室栋幢座期年届级区馆教厅苑场校院系';
+
+function findFirstSerial(text) {
+  const reA = /(?<![0-9])(\d{1,2})(?![0-9])(?=[\u4e00-\u9fa5A-Za-z“”‘’（(])/g;
+  let m;
+  while ((m = reA.exec(text)) !== null) {
+    const nextChar = text[m.index + m[0].length] || '';
+    if (QUANT_CHARS.includes(nextChar)) continue;
+    if (nextChar === '时' || nextChar === '地') continue;
+    return { index: m.index, numStr: m[0] };
+  }
+
+  const reB = /(?<=\d)(\d)(?![0-9])(?=[\u4e00-\u9fa5A-Za-z“”‘’（(])/g;
+  while ((m = reB.exec(text)) !== null) {
+    const nextChar = text[m.index + m[0].length] || '';
+    if (QUANT_CHARS.includes(nextChar)) continue;
+    if (nextChar === '时' || nextChar === '地') continue;
+    return { index: m.index, numStr: m[0] };
+  }
+
+  return null;
+}
+
+function cleanHeadCompany(headSeg, dateInfo) {
+  let s = headSeg;
+  if (dateInfo && dateInfo.matched) s = s.replace(dateInfo.matched, '');
+  s = s.replace(/[周星期礼拜]\s*[一二三四五六日天]/g, '');
+  s = s.replace(/^[\s\d]+/, '');
+  s = s.replace(/^[\s\-—·、,，。.【】()（）:：]+/, '');
+  return s.trim();
+}
+
+function parseSmart(raw) {
+  const text = raw.replace(/\r/g, '\n').trim();
+  if (!text) return null;
+
+  const anchors = [];
+  const reAnc = /时间\s*[:：]/g;
+  let m;
+  while ((m = reAnc.exec(text)) !== null) {
+    anchors.push({ start: m.index, end: m.index + m[0].length });
+  }
+  if (anchors.length < 1) return null;
+
+  const headText = text.slice(0, Math.min(anchors[0].start, 60));
+  const globalDateInfo = extractDateInfo(headText);
+  const globalDate = globalDateInfo ? globalDateInfo.date : '';
+
+  let carryCompany = cleanHeadCompany(text.slice(0, anchors[0].start), globalDateInfo);
+
+  const entries = [];
+
+  for (let i = 0; i < anchors.length; i++) {
+    const segEnd = (i + 1 < anchors.length) ? anchors[i + 1].start : text.length;
+    const seg = text.slice(anchors[i].end, segEnd);
+
+    const tMatch = seg.match(/^\s*(\d{1,2})\s*[:：]\s*(\d{1,2})(?:\s*[-–~至到]\s*(\d{1,2})\s*[:：]\s*(\d{1,2}))?/);
+    if (!tMatch) continue;
+    const startTime = `${pad(+tMatch[1])}:${pad(+tMatch[2])}`;
+    const endTime = tMatch[3] !== undefined ? `${pad(+tMatch[3])}:${pad(+tMatch[4])}` : '';
+
+    let rest = seg.slice(tMatch[0].length);
+    const locPrefix = rest.match(/^\s*地点\s*[:：]\s*/);
+    if (locPrefix) rest = rest.slice(locPrefix[0].length);
+
+    let location = rest.trim();
+    let nextCompany = '';
+    const sp = findFirstSerial(rest);
+    if (sp) {
+      location = rest.slice(0, sp.index).trim();
+      nextCompany = rest.slice(sp.index + sp.numStr.length).trim();
+    }
+
+    location = location.replace(/^[\s\-—·、,，。.]+|[\s\-—·、,，。.]+$/g, '').trim();
+
+    const company = (carryCompany || '未识别公司').trim();
+
+    entries.push({
+      company,
+      type: judgeType(company),
+      date: globalDate,
+      startTime,
+      endTime,
+      location,
+      note: ''
+    });
+
+    carryCompany = nextCompany.replace(/^[\s\-—·、,，。.【】()（）]+/, '').trim();
+  }
+
+  return entries.length >= 2 ? entries : null;
+}
+
+/* ============ 统一调度 ============ */
+function smartParse(raw) {
+  const smart = parseSmart(raw);
+  if (smart && smart.length >= 2) return smart;
+
+  const multi = parseMultiEntries(raw);
+  if (multi && multi.length >= 2) return multi;
+
+  return null;
+}
+
+/* ============ 数据层 ============ */
+const STORAGE = 'jobfair-records-v1';
+let records = [];
+let editingId = null;
+let previewRecords = [];
+
+let selectedDate = fmtDateObj(new Date());
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let currentFilteredItems = [];
+
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORAGE));
+    records = Array.isArray(d) ? d : [];
+  } catch (e) { records = []; }
+}
+function save() {
+  try { localStorage.setItem(STORAGE, JSON.stringify(records)); } catch (e) {}
+}
+
+/* ============ 记录卡片 ============ */
+function itemHTML(r, showDateBadge) {
+  const d = r.date ? parseDateObj(r.date) : null;
+  const ended = isEnded(r);
+  const deadline = expireDeadline(r);
+  const soonExpire = deadline !== null && !isPastDeadline(r) && (deadline - Date.now() < 12 * 3600 * 1000);
+
+  const weekday = d ? '周' + WEEK_CN[d.getDay()] : '';
+  const dateText = d ? `${d.getMonth() + 1}/${d.getDate()}` : '待定';
+  const subText = d ? weekday : (r.date ? r.date.slice(0, 4) : '');
+  const timeText = r.startTime
+    ? (r.endTime ? `${r.startTime} – ${r.endTime}` : r.startTime)
+    : '时间待定';
+
+  const tagClass = r.type === '宣讲会' ? 't-talk' : r.type === '招聘会' ? 't-fair' : 't-other';
+
+  const badge = showDateBadge === false ? '' : `
+      <div class="date-badge">
+        <div class="d">${dateText}</div>
+        <div class="w">${subText}</div>
+      </div>`;
+
+  return `
+    <div class="item ${ended ? 'past' : ''}">
+      ${badge}
+      <div class="info">
+        <div class="company">
+          ${esc(r.company || '未识别公司')}
+          <span class="tag ${tagClass}">${esc(r.type || '其他')}</span>
+          ${ended ? '<span class="tag t-past">已结束</span>' : ''}
+          ${soonExpire ? '<span class="tag t-expire">即将清理</span>' : ''}
+        </div>
+        <div class="meta">
+          <span>🕐 ${esc(timeText)}</span>
+          ${r.location ? `<span>📍 ${esc(r.location)}</span>` : ''}
+          ${r.date ? `<span>📅 ${esc(r.date)}</span>` : ''}
+        </div>
+        ${r.note ? `<div class="note">📝 ${esc(r.note)}</div>` : ''}
+      </div>
+      <div class="actions">
+        <button type="button" class="btn small" data-act="edit" data-id="${r.id}">编辑</button>
+        <button type="button" class="btn small danger" data-act="del" data-id="${r.id}">删除</button>
+      </div>
+    </div>`;
+}
+
+/* =====================================================
+   日期按钮 & 弹出小日历
+   ===================================================== */
+function updateDateBtnText() {
+  if (selectedDate === NONE_DATE) {
+    $('dateBtnText').textContent = '未指定日期';
+    return;
+  }
+  const d = parseDateObj(selectedDate);
+  const todayKey = fmtDateObj(new Date());
+  const isToday = selectedDate === todayKey;
+  $('dateBtnText').textContent =
+    `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 周${WEEK_CN[d.getDay()]}` +
+    (isToday ? '（今天）' : '');
+}
+
+function toggleCalPop(show) {
+  const pop = $('calPop');
+  const btn = $('dateBtn');
+  if (show === undefined) show = pop.classList.contains('hidden');
+
+  if (show) {
+    renderCalPop();
+    pop.classList.remove('hidden');
+    btn.classList.add('open');
+  } else {
+    pop.classList.add('hidden');
+    btn.classList.remove('open');
+  }
+}
+
+function renderCalPop() {
+  const firstDay = new Date(calYear, calMonth, 1);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
+
+  const cells = [];
+  for (let i = startWeekday - 1; i >= 0; i--) {
+    cells.push({ y: calYear, m: calMonth - 1, d: daysInPrevMonth - i, other: true });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ y: calYear, m: calMonth, d, other: false });
+  }
+  let nd = 1;
+  while (cells.length < 42) {
+    cells.push({ y: calYear, m: calMonth + 1, d: nd++, other: true });
+  }
+
+  const countMap = {};
+  currentFilteredItems.forEach(r => {
+    if (r.date) countMap[r.date] = (countMap[r.date] || 0) + 1;
+  });
+  const noDateCount = currentFilteredItems.filter(r => !r.date).length;
+  const todayKey = fmtDateObj(new Date());
+
+  const cellsHtml = cells.map(c => {
+    const dateObj = new Date(c.y, c.m, c.d);
+    const key = fmtDateObj(dateObj);
+    const count = countMap[key] || 0;
+    const cls = ['cal-cell'];
+    if (c.other) cls.push('other');
+    if (key === todayKey) cls.push('today');
+    if (key === selectedDate) cls.push('selected');
+    if (count > 0) cls.push('has');
+    return `<div class="${cls.join(' ')}" data-date="${key}" data-other="${c.other ? 1 : 0}">
+      <span>${c.d}</span>
+      ${count > 0 ? `<i class="cal-badge">${count}</i>` : ''}
+    </div>`;
+  }).join('');
+
+  $('calPop').innerHTML = `
+    <div class="cal-pop-head">
+      <button type="button" class="cal-nav" data-cal="prev" title="上个月">‹</button>
+      <span class="cal-pop-title">${calYear}年${calMonth + 1}月</span>
+      <button type="button" class="cal-nav" data-cal="next" title="下个月">›</button>
+    </div>
+    <div class="cal-pop-week">
+      <span class="wkend">日</span><span>一</span><span>二</span><span>三</span>
+      <span>四</span><span>五</span><span class="wkend">六</span>
+    </div>
+    <div class="cal-pop-grid">${cellsHtml}</div>
+    <div class="cal-pop-foot">
+      <button type="button" class="cal-foot-btn" data-cal="today">回到今天</button>
+      ${noDateCount > 0 ? `<button type="button" class="cal-foot-btn" data-cal="none">未指定日期 (${noDateCount})</button>` : ''}
+    </div>`;
+}
+
+/* =====================================================
+   当天安排渲染
+   ===================================================== */
+function renderDayList() {
+  const dir = $('sortSel').value;
+
+  if (selectedDate === NONE_DATE) {
+    let dayItems = currentFilteredItems.filter(r => !r.date);
+    dayItems.sort((a, b) => {
+      const ka = a.startTime || '23:59', kb = b.startTime || '23:59';
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    });
+    if (dir === 'desc') dayItems.reverse();
+
+    const head = `
+      <div class="day-result-head">
+        <span class="dr-date">未指定日期</span>
+        <span class="dr-count">${dayItems.length ? dayItems.length + ' 条安排' : ''}</span>
+      </div>`;
+
+    $('list').innerHTML = head + (dayItems.length
+      ? `<div class="day-items">${dayItems.map(r => itemHTML(r, false)).join('')}</div>`
+      : `<div class="day-empty">没有未指定日期的安排</div>`);
+    return;
+  }
+
+  const d = parseDateObj(selectedDate);
+  const week = WEEK_CN[d.getDay()];
+  const isToday = selectedDate === fmtDateObj(new Date());
+
+  let dayItems = currentFilteredItems.filter(r => r.date === selectedDate);
+  dayItems.sort((a, b) => {
+    const ka = a.startTime || '23:59', kb = b.startTime || '23:59';
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
+  if (dir === 'desc') dayItems.reverse();
+
+  const head = `
+    <div class="day-result-head">
+      <span class="dr-date">${d.getMonth() + 1}月${d.getDate()}日</span>
+      <span class="dr-week">周${week}</span>
+      ${isToday ? '<span class="day-today-badge">今天</span>' : ''}
+      <span class="dr-count">${dayItems.length ? dayItems.length + ' 条安排' : ''}</span>
+    </div>`;
+
+  $('list').innerHTML = head + (dayItems.length
+    ? `<div class="day-items">${dayItems.map(r => itemHTML(r, false)).join('')}</div>`
+    : `<div class="day-empty">当天无安排</div>`);
+}
+
+/* ============ 渲染入口 ============ */
+function render() {
+  const filter = $('filterSel').value;
+  const dir = $('sortSel').value;
+
+  let items = records.slice();
+  if (filter !== 'all') items = items.filter(r => r.type === filter);
+
+  items.sort((a, b) => {
+    const ka = (a.date || '9999-12-31') + ' ' + (a.startTime || '23:59');
+    const kb = (b.date || '9999-12-31') + ' ' + (b.startTime || '23:59');
+    if (ka < kb) return dir === 'asc' ? -1 : 1;
+    if (ka > kb) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  currentFilteredItems = items;
+
+  $('count').textContent = filter === 'all'
+    ? `共 ${records.length} 条`
+    : `筛选出 ${items.length} 条 / 全部 ${records.length} 条`;
+
+  updateDateBtnText();
+  renderDayList();
+
+  if (!$('calPop').classList.contains('hidden')) renderCalPop();
+}
+
+/* ============ 多公司预览 ============ */
+function renderPreview() {
+  const box = $('previewList');
+  $('previewCount').textContent = previewRecords.length;
+
+  const dates = [...new Set(previewRecords.map(r => r.date).filter(Boolean))];
+  $('previewDate').textContent = dates.length ? `（日期：${dates.join('、')}）` : '（未识别日期）';
+
+  if (!previewRecords.length) {
+    $('previewCard').classList.add('hidden');
+    return;
+  }
+
+  box.innerHTML = previewRecords.map((r, i) => {
+    const timeText = r.endTime ? `${r.startTime} – ${r.endTime}` : r.startTime;
+    const tagClass = r.type === '宣讲会' ? 't-talk' : r.type === '招聘会' ? 't-fair' : 't-other';
+    return `
+      <div class="preview-item">
+        <div class="pi-time">${esc(timeText)}</div>
+        <div class="pi-info">
+          <div class="pi-name">
+            ${esc(r.company)}
+            <span class="tag ${tagClass}">${esc(r.type)}</span>
+          </div>
+          ${r.location ? `<div class="pi-meta">📍 ${esc(r.location)}</div>` : ''}
+        </div>
+        <button type="button" class="btn small danger" data-idx="${i}">移除</button>
+      </div>`;
+  }).join('');
+}
+
+/* ============ 单条表单 ============ */
+function setHint(msg) { $('hint').textContent = msg || ''; }
+
+function openForm(data, id) {
+  editingId = id || null;
+  $('fCompany').value = data.company || '';
+  $('fType').value = data.type || '宣讲会';
+  $('fDate').value = data.date || '';
+  $('fStart').value = data.startTime || '';
+  $('fEnd').value = data.endTime || '';
+  $('fLocation').value = data.location || '';
+  $('fNote').value = data.note || '';
+  $('editTitle').textContent = id ? '编辑记录' : '确认识别结果';
+  $('editCard').classList.remove('hidden');
+  $('editCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeForm() {
+  editingId = null;
+  $('editCard').classList.add('hidden');
+}
+
+function startEdit(id) {
+  const r = records.find(x => x.id === id);
+  if (r) {
+    $('previewCard').classList.add('hidden');
+    toggleCalPop(false);
+    openForm(r, id);
+  }
+}
+
+function delRecord(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  const name = r.company || '未识别公司';
+  showConfirm(`确定删除「<b>${esc(name)}</b>」这条记录吗？`, () => {
+    records = records.filter(x => x.id !== id);
+    save();
+    render();
+    toast('已删除');
+  }, '删除');
+}
+
+/* ============ 事件委托 ============ */
+function bindDelegation() {
+  const list = $('list');
+  list.addEventListener('click', (e) => {
+    const btn = e.target.closest ? e.target.closest('button[data-act]') : null;
+    if (!btn || !list.contains(btn)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = btn.getAttribute('data-id');
+    if (!id) return;
+    const act = btn.getAttribute('data-act');
+    if (act === 'edit') startEdit(id);
+    else if (act === 'del') delRecord(id);
+  });
+
+  const previewBox = $('previewList');
+  previewBox.addEventListener('click', (e) => {
+    const btn = e.target.closest ? e.target.closest('button[data-idx]') : null;
+    if (!btn || !previewBox.contains(btn)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const idx = parseInt(btn.getAttribute('data-idx'), 10);
+    if (isNaN(idx)) return;
+    previewRecords.splice(idx, 1);
+    if (!previewRecords.length) $('previewCard').classList.add('hidden');
+    else renderPreview();
+  });
+
+  $('calPop').addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    const nav = e.target.closest ? e.target.closest('[data-cal]') : null;
+    if (nav) {
+      const t = nav.getAttribute('data-cal');
+      if (t === 'prev') {
+        calMonth--;
+        if (calMonth < 0) { calMonth = 11; calYear--; }
+        renderCalPop();
+      } else if (t === 'next') {
+        calMonth++;
+        if (calMonth > 11) { calMonth = 0; calYear++; }
+        renderCalPop();
+      } else if (t === 'today') {
+        const now = new Date();
+        calYear = now.getFullYear();
+        calMonth = now.getMonth();
+        selectedDate = fmtDateObj(now);
+        toggleCalPop(false);
+        render();
+      } else if (t === 'none') {
+        selectedDate = NONE_DATE;
+        toggleCalPop(false);
+        render();
+      }
+      return;
+    }
+
+    const cell = e.target.closest ? e.target.closest('.cal-cell') : null;
+    if (cell) {
+      const key = cell.getAttribute('data-date');
+      const other = cell.getAttribute('data-other') === '1';
+      if (other) {
+        const d = parseDateObj(key);
+        calYear = d.getFullYear();
+        calMonth = d.getMonth();
+      }
+      selectedDate = key;
+      toggleCalPop(false);
+      render();
+    }
+  });
+}
+
+/* ============ 事件绑定 ============ */
+$('parseBtn').addEventListener('click', () => {
+  const raw = $('raw').value.trim();
+  if (!raw) { setHint('请先粘贴或输入招聘信息'); $('raw').focus(); return; }
+
+  const multi = smartParse(raw);
+
+  if (multi && multi.length >= 2) {
+    $('editCard').classList.add('hidden');
+    previewRecords = multi;
+    renderPreview();
+    $('previewCard').classList.remove('hidden');
+    $('previewCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    const talkCount = multi.filter(x => x.type === '宣讲会').length;
+    const fairCount = multi.filter(x => x.type === '招聘会').length;
+    setHint(`识别到 ${multi.length} 条（宣讲会 ${talkCount} · 招聘会 ${fairCount}）`);
+  } else {
+    $('previewCard').classList.add('hidden');
+    const data = parseText(raw);
+    openForm(data, null);
+    setHint(`单条识别：${data.company || '（未识别公司）'} · ${data.date || '（未识别日期）'} · ${data.startTime || '（未识别时间）'}`);
+  }
+});
+
+$('addAllBtn').addEventListener('click', () => {
+  if (!previewRecords.length) return;
+  previewRecords.forEach(r => {
+    records.push({ id: uid(), ...r, createdAt: Date.now() });
+  });
+  const n = previewRecords.length;
+
+  const firstWithDate = previewRecords.find(r => r.date);
+  if (firstWithDate) {
+    selectedDate = firstWithDate.date;
+    const dd = parseDateObj(firstWithDate.date);
+    calYear = dd.getFullYear();
+    calMonth = dd.getMonth();
+  }
+
+  previewRecords = [];
+  save();
+  render();
+  $('previewCard').classList.add('hidden');
+  $('raw').value = '';
+  setHint(`已添加 ${n} 条记录 ✓`);
+  toast(`已添加 ${n} 条记录`);
+});
+
+$('cancelPreviewBtn').addEventListener('click', () => {
+  previewRecords = [];
+  $('previewCard').classList.add('hidden');
+  setHint('');
+});
+
+$('manualBtn').addEventListener('click', () => {
+  $('previewCard').classList.add('hidden');
+  toggleCalPop(false);
+  openForm({ company: '', type: '宣讲会', date: selectedDate === NONE_DATE ? '' : selectedDate, startTime: '', endTime: '', location: '', note: '' }, null);
+  setHint('手动填写');
+});
+
+$('confirmBtn').addEventListener('click', () => {
+  const data = {
+    company: $('fCompany').value.trim(),
+    type: $('fType').value,
+    date: $('fDate').value,
+    startTime: $('fStart').value,
+    endTime: $('fEnd').value,
+    location: $('fLocation').value.trim(),
+    note: $('fNote').value.trim()
+  };
+  if (!data.company && !data.date) {
+    toast('请至少填写「公司名称」或「日期」');
+    return;
+  }
+  if (editingId) {
+    const r = records.find(x => x.id === editingId);
+    if (r) Object.assign(r, data);
+  } else {
+    records.push({ id: uid(), ...data, createdAt: Date.now() });
+  }
+  if (data.date) {
+    selectedDate = data.date;
+    const dd = parseDateObj(data.date);
+    calYear = dd.getFullYear();
+    calMonth = dd.getMonth();
+  } else {
+    selectedDate = NONE_DATE;
+  }
+  save();
+  render();
+  closeForm();
+  $('raw').value = '';
+  setHint('已保存 ✓');
+  toast('已保存');
+});
+
+$('cancelBtn').addEventListener('click', () => { closeForm(); setHint(''); });
+
+$('filterSel').addEventListener('change', render);
+$('sortSel').addEventListener('change', render);
+
+$('dateBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCalPop();
+});
+
+document.addEventListener('click', (e) => {
+  const pop = $('calPop');
+  if (pop.classList.contains('hidden')) return;
+  if ($('datePickerWrap').contains(e.target)) return;
+  toggleCalPop(false);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') toggleCalPop(false);
+});
+
+$('cleanExpiredBtn').addEventListener('click', () => {
+  const removed = cleanupExpired(true);
+  if (removed > 0) toast(`🧹 已清理 ${removed} 条过期记录`);
+  else toast('暂无需要清理的过期记录');
+});
+
+$('clearAll').addEventListener('click', () => {
+  if (!records.length) { toast('当前没有记录'); return; }
+  showConfirm(`确定清空全部 <b>${records.length}</b> 条记录吗？此操作不可恢复。`, () => {
+    records = [];
+    save();
+    render();
+    setHint('已清空全部记录');
+    toast('已清空全部记录');
+  }, '清空');
+});
+
+$('raw').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    $('parseBtn').click();
+  }
+});
+
+/* ============ 启动 ============ */
+load();
+
+const _d0 = new Date();
+selectedDate = fmtDateObj(_d0);
+calYear = _d0.getFullYear();
+calMonth = _d0.getMonth();
+
+const firstClean = cleanupExpired(true);
+render();
+if (firstClean > 0) {
+  setTimeout(() => toast(`🧹 已自动清理 ${firstClean} 条过期记录`), 400);
+}
+
+bindDelegation();
+
+setInterval(() => cleanupExpired(false), 60 * 1000);
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) cleanupExpired(false);
+});
+
+/* ============ Service Worker 注册 ============ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

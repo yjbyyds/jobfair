@@ -1047,6 +1047,7 @@ function smartParse(raw) {
 
 /* ============ 数据层 ============ */
 const STORAGE = 'jobfair-records-v1';
+const DATE_STORAGE = 'jobfair-selected-date';
 let records = [];
 let editingId = null;
 let previewRecords = [];
@@ -1061,9 +1062,16 @@ function load() {
     const d = JSON.parse(localStorage.getItem(STORAGE));
     records = Array.isArray(d) ? d : [];
   } catch (e) { records = []; }
+  try {
+    const sd = localStorage.getItem(DATE_STORAGE);
+    if (sd) selectedDate = sd;
+  } catch (e) {}
 }
 function save() {
   try { localStorage.setItem(STORAGE, JSON.stringify(records)); } catch (e) {}
+}
+function saveSelectedDate() {
+  try { localStorage.setItem(DATE_STORAGE, selectedDate); } catch (e) {}
 }
 
 /* ============ 重复检测 ============ */
@@ -1312,7 +1320,6 @@ function renderPreview() {
     return;
   }
 
-  // 计算重复
   const seenKeys = new Set();
   box.innerHTML = previewRecords.map((r, i) => {
     const timeText = r.endTime ? `${r.startTime} – ${r.endTime}` : r.startTime;
@@ -1430,10 +1437,12 @@ function bindDelegation() {
         calYear = now.getFullYear();
         calMonth = now.getMonth();
         selectedDate = fmtDateObj(now);
+        saveSelectedDate();
         toggleCalPop(false);
         render();
       } else if (t === 'none') {
         selectedDate = NONE_DATE;
+        saveSelectedDate();
         toggleCalPop(false);
         render();
       }
@@ -1450,6 +1459,7 @@ function bindDelegation() {
         calMonth = d.getMonth();
       }
       selectedDate = key;
+      saveSelectedDate();
       toggleCalPop(false);
       render();
     }
@@ -1514,6 +1524,7 @@ function doAddAll(list) {
   const firstWithDate = list.find(r => r.date);
   if (firstWithDate) {
     selectedDate = firstWithDate.date;
+    saveSelectedDate();
     const dd = parseDateObj(firstWithDate.date);
     calYear = dd.getFullYear();
     calMonth = dd.getMonth();
@@ -1531,7 +1542,6 @@ function doAddAll(list) {
 $('addAllBtn').addEventListener('click', () => {
   if (!previewRecords.length) return;
 
-  // 分类：重复 / 非重复（含批内自身重复）
   const dupList = [];
   const nonDupList = [];
   const seenKeys = new Set();
@@ -1604,7 +1614,6 @@ $('confirmBtn').addEventListener('click', () => {
     return;
   }
 
-  // 保存时也检测重复（编辑时排除自身）
   const dup = findDuplicateRecord(data, editingId);
   if (dup) {
     const dupInfo = `${esc(dup.company || '未识别公司')} · ${esc(dup.date || '未指定日期')}${dup.startTime ? ' · ' + esc(dup.startTime) : ''}`;
@@ -1631,11 +1640,13 @@ function reallySaveRecord(data) {
   }
   if (data.date) {
     selectedDate = data.date;
+    saveSelectedDate();
     const dd = parseDateObj(data.date);
     calYear = dd.getFullYear();
     calMonth = dd.getMonth();
   } else {
     selectedDate = NONE_DATE;
+    saveSelectedDate();
   }
   save();
   render();
@@ -1693,10 +1704,12 @@ $('raw').addEventListener('keydown', e => {
 /* ============ 启动 ============ */
 load();
 
-const _d0 = new Date();
-selectedDate = fmtDateObj(_d0);
-calYear = _d0.getFullYear();
-calMonth = _d0.getMonth();
+// 若已保存过选中日期，用它作为日历初始月份；否则用今天
+const _baseDate = (selectedDate && selectedDate !== NONE_DATE)
+  ? parseDateObj(selectedDate)
+  : new Date();
+calYear = _baseDate.getFullYear();
+calMonth = _baseDate.getMonth();
 
 const firstClean = cleanupExpired(true);
 render();
